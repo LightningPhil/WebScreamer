@@ -35,6 +35,49 @@ The editor accepts one command per line; lines starting with `!` are comments. T
 - **Initial conditions**: `Initial <target_label> <volts>` assigns starting voltage to the most recent block (for TRLine, every section).
 - **Probes**: `TXT VC1` requests a voltage trace for the most recent block; `TXT IIN` records current entering the block (multiple labels auto-suffix to stay unique).
 
+### Element behavior and usage examples
+
+The key building blocks mimic their namesakes from classic pulsed-power decks. Each element occupies a position in series from left to right; probes read the closest upstream/downstream node implied by their label (e.g., `VC1` for the capacitor voltage in the first block).
+
+- **RCGround** connects the current series node to ground through a resistor and optional capacitor. Useful for modeling a resistive load with parasitic capacitance or a snubber to ground.
+
+  ```
+  ! 10 Ω to ground with 1 nF stray capacitance at node 1
+  RCGround 10 1e-9
+  TXT VC1   ! voltage at the resistor/capacitor node
+  TXT IIN   ! current entering the R-C branch
+  ```
+
+- **RLSeries** inserts a resistor and optional inductor in series, continuing the main conduction path. This models wiring inductance or a discrete series choke with loss.
+
+  ```
+  ! 5 Ω resistor with 50 nH series inductance
+  RLSeries 5 50e-9
+  TXT VC1   ! voltage across the RL branch
+  TXT IIN   ! current through the series elements
+  ```
+
+- **TRLine Linear** creates a lossless transmission line with characteristic impedance `Z_ohms` and total one-way delay `delay_seconds`. The optional `resolution` parameter (or global `TRLine-Resolution`) sets the LC section size; smaller values increase fidelity at the cost of more computation. Initial conditions apply to every section.
+
+  ```
+  ! 10 ns, 50 Ω line segmented at 100 ps resolution
+  TRLine Linear 10e-9 50 100e-12
+  Initial TLINE 5e3  ! 5 kV precharge along the line
+  TXT VC1            ! near-end voltage
+  TXT IIN            ! launch-end current
+  ```
+
+- **SWITCH Instant** behaves as a time-controlled resistor that steps from `R_open` to `R_close` at `t_switch`, with a small built-in inductance to keep the solver stable. Place it between source and load to model fast closing or opening events.
+
+  ```
+  ! Opens a charged source to a 1 Ω load at 200 ns
+  RLSeries 1            ! load
+  SWITCH Instant 1e6 1 200e-9
+  Initial VC1 5e3       ! 5 kV across the load at t=0
+  TXT VC1
+  TXT IIN
+  ```
+
 ## Workflow and data products
 
 1. The main thread sends the input deck to the worker and resets the log/plot state.
