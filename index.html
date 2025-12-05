@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebScreamer: Pulsed Power Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Using Plotly via CDN for visualization -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="brand">
+                <h1>Web<span>Screamer</span></h1>
+                <span class="version">v4.4.js</span>
+            </div>
+            <div class="controls">
+                <button id="btnRun" class="primary">RUN SIMULATION</button>
+                <button id="btnDownload" disabled>Download CSV</button>
+                <div class="status" id="statusBox">Ready</div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main>
+            <!-- Input Pane -->
+            <section class="panel input-panel">
+                <div class="panel-header">
+                    <span>Input Deck</span>
+                    <select id="exampleSelector">
+                        <option value="">-- Load Example --</option>
+                        <option value="simple">Simple LCR</option>
+                        <option value="trline">Transmission Line</option>
+                    </select>
+                </div>
+                <div class="editor-container">
+                    <textarea id="codeEditor" spellcheck="false">
+! Simple WebScreamer Test
+! A capacitor discharging into a resistor
+Time-step 1e-9
+End-time 500e-9
+Resolution-time 1e-9
+
+BRANCH
+! Capacitor 100nF, charged to 100kV
+RCGround 1e12 100e-9
+Initial VC1 100e3
+
+! Output request for Voltage on Cap
+TXT VC1
+
+! Series Inductor 50nH
+RLSeries 0.1 50e-9
+
+! Load Resistor 5 Ohms
+RCGround 5.0 0.0
+! Output request for Load Current (Current into block)
+TXT IIN
+</textarea>
+                </div>
+            </section>
+
+            <!-- Output Pane -->
+            <section class="panel output-panel">
+                <div class="panel-header">
+                    <span>Simulation Results</span>
+                    <div id="plotControls">
+                        <!-- Plot toggles will appear here -->
+                    </div>
+                </div>
+                <div id="plotArea"></div>
+                <div id="logArea" class="log-console">
+                    <div class="log-line">System initialized. Waiting for run...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Main Entry Point -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
