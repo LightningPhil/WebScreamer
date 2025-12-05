@@ -28,9 +28,16 @@ export class Solver {
         for (let i = 0; i < N; i++) {
             const node = this.nodes[i];
             if (node.isSwitch) {
+                const p = node.switchParams;
                 if (node.switchType === 'INSTANT') {
-                    const p = node.switchParams;
                     node.R = (time < p.tSwitch) ? p.rOpen : p.rClose;
+                } else if (node.switchType === 'EXPONENTIAL') {
+                    if (time < p.tSwitch) {
+                        node.R = p.rOpen + p.rClose;
+                    } else {
+                        const tLocal = time - p.tSwitch;
+                        node.R = p.rOpen * Math.exp(-p.kDecay * tLocal) + p.rClose;
+                    }
                 }
             }
         }

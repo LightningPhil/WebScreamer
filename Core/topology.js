@@ -90,13 +90,28 @@ export class CircuitCompiler {
             }
 
             // --- SWITCH (New) ---
-            // Format: SWITCH Instant R_open R_close T_switch
+            // Format:
+            //   SWITCH Instant R_open R_close T_switch
+            //   SWITCH Exponential R1 R2 k_decay T_switch
             else if (cmd.startsWith('SWITCH')) {
                 currentBlockType = 'SWITCH';
-                const type = parts[1].toUpperCase(); // INSTANT
-                const rOpen = parseFloat(parts[2]);
-                const rClose = parseFloat(parts[3]);
-                const tSwitch = parseFloat(parts[4]);
+                const type = parts[1].toUpperCase(); // INSTANT | EXPONENTIAL
+
+                let rOpen, rClose, tSwitch, kDecay;
+                if (type === 'INSTANT') {
+                    rOpen = parseFloat(parts[2]);
+                    rClose = parseFloat(parts[3]);
+                    tSwitch = parseFloat(parts[4]);
+                }
+                else if (type === 'EXPONENTIAL') {
+                    rOpen = parseFloat(parts[2]);
+                    rClose = parseFloat(parts[3]);
+                    kDecay = parseFloat(parts[4]);
+                    tSwitch = parseFloat(parts[5]);
+                }
+                else {
+                    throw new Error(`Unknown SWITCH type: ${type}`);
+                }
 
                 // A Switch is an RLSeries where R varies.
                 // It needs the standard Phantom RCG preamble.
@@ -110,14 +125,15 @@ export class CircuitCompiler {
                 // 2. Real RLSeries (Variable Resistor)
                 // Initialize with R_open (t=0 state)
                 // L is assumed 0 (ideal switch) or small parasitic
+                const initialR = (type === 'EXPONENTIAL') ? (rOpen + rClose) : rOpen;
                 this.nodes.push({
                     id: nodeId++, type: EType.RL_SERIES,
-                    R: rOpen, L: 1e-9, // 1nH parasitic inductance
-                    G: 0, C: 0, 
+                    R: initialR, L: 1e-9, // 1nH parasitic inductance
+                    G: 0, C: 0,
                     isPhantom: false,
                     isSwitch: true,
                     switchType: type,
-                    switchParams: { rOpen, rClose, tSwitch }
+                    switchParams: { rOpen, rClose, tSwitch, kDecay }
                 });
             }
 

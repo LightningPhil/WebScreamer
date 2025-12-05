@@ -30,7 +30,7 @@ The editor accepts one command per line; lines starting with `!` are comments. T
 - **Elements** (each creates a new block in series order):
   - `RCGround <R_ohms> [C_farads]` — resistor and optional capacitor to ground. A large R approximates open-circuit; R=0 becomes a near-short.
   - `RLSeries <R_ohms> [L_henries]` — series resistor/inductor segment.
-  - `SWITCH Instant <R_open> <R_close> <t_switch>` — ideal time-controlled switch implemented as a variable resistor with small parasitic L.
+  - `SWITCH Instant <R_open> <R_close> <t_switch>` or `SWITCH Exponential <R1> <R2> <k_decay> <t_switch>` — ideal time-controlled switch implemented as a variable resistor with small parasitic L.
   - `TRLine Linear <delay_seconds> <Z_ohms> [resolution]` — lossless transmission line subdivided into LC sections based on delay and resolution.
 - **Initial conditions**: `Initial <target_label> <volts>` assigns starting voltage to the most recent block (for TRLine, every section).
 - **Probes**: `TXT VC1` requests a voltage trace for the most recent block; `TXT IIN` records current entering the block (multiple labels auto-suffix to stay unique).
@@ -74,6 +74,16 @@ The key building blocks mimic their namesakes from classic pulsed-power decks. E
   RLSeries 1            ! load
   SWITCH Instant 1e6 1 200e-9
   Initial VC1 5e3       ! 5 kV across the load at t=0
+  TXT VC1
+  TXT IIN
+  ```
+
+- **SWITCH Exponential** waits until `t_switch`, then decays from `R1 + R2` toward `R2` following `R = R1 * exp(-k_decay * t_local) + R2`, where `t_local` is time since the switch triggered. Before `t_switch` the resistance remains at `R1 + R2`.
+
+  ```
+  ! Soft-closing switch that ramps over ~3 time constants after 100 ns
+  RLSeries 1             ! load
+  SWITCH Exponential 1e6 1 1e3 100e-9
   TXT VC1
   TXT IIN
   ```
