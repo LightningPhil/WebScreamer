@@ -5,8 +5,8 @@
  * UPDATE: Explicit recording of t=0 Initial State to fix startup glitch.
  */
 
-import { CircuitCompiler } from './core/topology.js';
-import { Solver } from './core/solver.js';
+import { CircuitCompiler } from './Core/topology.js';
+import { Solver } from './Core/solver.js';
 
 let isRunning = false;
 
