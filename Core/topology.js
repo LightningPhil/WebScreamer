@@ -29,17 +29,87 @@ export class CircuitCompiler {
         
         const usedLabels = new Set();
         const lines = scriptText.split('\n');
-        let nodeId = 0; 
+        let nodeId = 0;
+
+        // Branch handling (limited Topbranch support)
+        let mainBranchStarted = false;
+        const pendingTopbranches = [];
+        let activeTopbranchAnchor = null;
 
         for (let line of lines) {
             line = line.trim();
-            if (!line || line.startsWith('!')) continue; 
+            if (!line || line.startsWith('!')) continue;
 
             const parts = line.split(/\s+/);
             const cmd = parts[0].toUpperCase();
 
             const currentBlockStart = nodeId;
             let currentBlockType = null;
+
+            // --- Branch markers ---
+            if (cmd === 'BRANCH') {
+                if (!mainBranchStarted) {
+                    mainBranchStarted = true;
+                }
+                else if (pendingTopbranches.length > 0) {
+                    activeTopbranchAnchor = pendingTopbranches.shift();
+                }
+                continue;
+            }
+
+            if (cmd === 'TOPBRANCH') {
+                // Record the last real series element as the anchor.
+                let anchorIndex = -1;
+                for (let i = this.nodes.length - 1; i >= 0; i--) {
+                    const n = this.nodes[i];
+                    if (n.type === EType.RL_SERIES && !n.isPhantom) {
+                        anchorIndex = i;
+                        break;
+                    }
+                }
+
+                if (anchorIndex === -1) {
+                    throw new Error('Topbranch requires a previous series element to attach to.');
+                }
+
+                pendingTopbranches.push(anchorIndex);
+                continue;
+            }
+
+            // If we are inside a pending Topbranch definition, combine the
+            // first encountered element in parallel with its anchor and skip
+            // normal node creation. This is a limited approximation that
+            // treats the child branch as a direct shunt between the anchor
+            // nodes.
+            if (activeTopbranchAnchor !== null) {
+                const anchorNode = this.nodes[activeTopbranchAnchor];
+
+                const combineParallel = (a, b) => {
+                    if (a === 0 || b === 0) return 0;
+                    if (!isFinite(a)) return b;
+                    if (!isFinite(b)) return a;
+                    return 1.0 / (1.0 / a + 1.0 / b);
+                };
+
+                if (cmd.startsWith('RCG')) {
+                    const branchR = parseFloat(parts[1]);
+                    const branchC = parts.length > 2 ? parseFloat(parts[2]) : 0.0;
+                    anchorNode.R = combineParallel(anchorNode.R, branchR);
+                    anchorNode.L = combineParallel(anchorNode.L, 0);
+                    anchorNode.C += branchC; // accumulate shunt capacitance
+                    activeTopbranchAnchor = null;
+                    continue;
+                }
+
+                if (cmd.startsWith('RLS')) {
+                    const branchR = parseFloat(parts[1]);
+                    const branchL = parts.length > 2 ? parseFloat(parts[2]) : 0.0;
+                    anchorNode.R = combineParallel(anchorNode.R, branchR);
+                    anchorNode.L = combineParallel(anchorNode.L, branchL);
+                    activeTopbranchAnchor = null;
+                    continue;
+                }
+            }
 
             if (cmd.startsWith('TIME-STEP')) {
                 this.dt = parseFloat(parts[1]);
