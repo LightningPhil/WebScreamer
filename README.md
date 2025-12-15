@@ -10,6 +10,7 @@ WebScreamer is a browser-based reimplementation of Sandia's SCREAMER pulsed-powe
 - `core/topology.js` parses the input deck into a list of nodes (resistors/inductors/capacitors/switches/transmission lines) plus requested output probes and timing parameters.
 - `core/solver.js` advances the solution using a banded pentadiagonal solve each time step, updating switch resistances as time-dependent elements.
 - `core/matrix.js` holds the dense Float64Array buffers for the solver and exposes reset/swapping helpers.
+- `docs/branching-prd.md` captures the SCREAMER-style branching PRD and design spec (Topbranch/Endbranch, parser rules, solver couplings).
 
 ## Running locally
 
